@@ -46,7 +46,6 @@ char* parse_string(char* string);
 int escape_lookup(char* c);
 void require(int bool, char* error);
 struct token_list* reverse_list(struct token_list* head);
-struct type* mirror_type(struct type* source, char* name);
 struct type* add_primitive(struct type* a);
 
 struct token_list* emit(char *s, struct token_list* head)
@@ -938,25 +937,94 @@ void primary_expr_variable(void)
 }
 
 void primary_expr(void);
+
+struct type* integer_promotion(struct type* t)
+{
+	/* 6.3.1 Arithmetic operands
+	 * 6.3.1.1 Boolean, characters, and integers
+	 * If an int can represent all values of the original type, the value is converted to an int;
+	 * otherwise, it is converted to an unsigned int. These are called the integer * promotions.
+	 * All other types are unchanged by the integer promotions.
+	 */
+	if(t->size < integer->size)
+	{
+		/* Any integer smaller than int can be represented as an int. */
+		return integer;
+	}
+
+	return t;
+}
+
 struct type* promote_type(struct type* a, struct type* b)
 {
 	require(NULL != b, "impossible case 1 in promote_type\n");
 	require(NULL != a, "impossible case 2 in promote_type\n");
 
-	if(a == b) return a;
+	/* C99 6.3.1.8 Usual arithmetic conversions */
+	/* Anything before this has to do with floats and complex numbers. So we skip those.
+	 * Otherwise, the integer promotions are performed on both operands.
+	 * Then the following rules are applied to the promoted operands:
+	 */
 
-	struct type* i;
-	for(i = global_types; NULL != i; i = i->next)
+	a = integer_promotion(a);
+	b = integer_promotion(b);
+
+	/* If both operands have the same type, then no further conversion is needed. */
+	if (a == b) return a;
+
+	/*
+	 * Otherwise, if both operands have signed integer types or both have unsigned
+	 * integer types, the operand with the type of lesser integer conversion rank is
+	 * converted to the type of the operand with greater rank.
+	 */
+	if(a->is_signed == b->is_signed)
 	{
-		if(a->name == i->name) break;
-		if(b->name == i->name) break;
-		if(a->name == i->indirect->name) break;
-		if(b->name == i->indirect->name) break;
-		if(a->name == i->indirect->indirect->name) break;
-		if(b->name == i->indirect->indirect->name) break;
+		if (a->size > b->size)
+		{
+			return a;
+		}
+
+		return b;
 	}
-	require(NULL != i, "impossible case 3 in promote_type\n");
-	return i;
+
+	struct type* signed_operand;
+	struct type* unsigned_operand;
+	if(a->is_signed)
+	{
+		signed_operand = a;
+		unsigned_operand = b;
+	}
+	else
+	{
+		signed_operand = b;
+		unsigned_operand = a;
+	}
+	/*
+	 * Otherwise, if the operand that has unsigned integer type has rank greater or
+	 * equal to the rank of the type of the other operand, then the operand with
+	 * signed integer type is converted to the type of the operand with unsigned integer type.
+	 */
+	if(unsigned_operand->size >= signed_operand->size)
+	{
+		return unsigned_operand;
+	}
+
+	/*
+	 * Otherwise, if the type of the operand with signed integer type can represent
+	 * all of the values of the type of the operand with unsigned integer type, then
+	 * the operand with unsigned integer type is converted to the type of the
+	 * operand with signed integer type.
+	 */
+	if(signed_operand->size > unsigned_operand->size)
+	{
+		return signed_operand;
+	}
+
+	/*
+	 * Otherwise, both operands are converted to the unsigned integer type
+	 * corresponding to the type of the operand with signed integer type.
+	 */
+	return unsigned_operand; /* Hope this is good enough */
 }
 
 void common_recursion(FUNCTION f)
@@ -3065,17 +3133,21 @@ void global_constant(void)
 	}
 }
 
-struct type* global_typedef(void)
+void global_typedef(void)
 {
-	struct type* type_size;
 	/* typedef $TYPE $NAME; */
 	global_token = global_token->next;
-	type_size = type_name();
+	struct typedef_list* new_typedef = calloc(1, sizeof(struct typedef_list));
+	new_typedef->next = global_typedefs;
+	new_typedef->identifier = type_name();
+	new_typedef->typedef_name = global_token->s;
+
+	global_typedefs = new_typedef;
+
 	require(NULL != global_token, "Received EOF while reading typedef\n");
-	type_size = mirror_type(type_size, global_token->s);
 	global_token = global_token->next;
+
 	require_match("ERROR in typedef statement\nMissing ;\n", ";");
-	return type_size;
 }
 
 void global_static_array(struct type* type_size, struct token_list* name)
@@ -3240,7 +3312,7 @@ new_type:
 	/* Handle c typedef statements */
 	if(match("typedef", global_token->s))
 	{
-		type_size = global_typedef();
+		global_typedef();
 		goto new_type;
 	}
 

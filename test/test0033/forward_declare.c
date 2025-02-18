@@ -66,8 +66,6 @@ int forward_double(struct forward** arg) {
 	return 0;
 }
 
-typedef struct forward TypedefForward;
-
 int forward_double_typedef(TypedefForward** arg) {
 	if((*arg)->a != 0xDEADBEEF) {
 		return 1;

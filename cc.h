@@ -83,6 +83,13 @@ struct case_list
 	char* value;
 };
 
+struct typedef_list
+{
+	struct typedef_list* next;
+	struct type* identifier;
+	char* typedef_name;
+};
+
 struct token_list* sym_declare(char *s, struct type* t, struct token_list* list);
 
 #include "cc_globals.h"

@@ -72,6 +72,9 @@ struct type* new_primitive(char* name0, char* name1, char* name2, int size, int 
 /* Initialize default types */
 void initialize_types(void)
 {
+	/* Initialization for globals does not work on all platforms. */
+	global_typedefs = NULL;
+
 	if(AMD64 == Architecture || AARCH64 == Architecture || RISCV64 == Architecture) register_size = 8;
 	else register_size = 4;
 
@@ -161,13 +164,39 @@ struct type* lookup_type(char* s, struct type* start)
 	return NULL;
 }
 
+struct type* lookup_typedef(char* s)
+{
+	struct typedef_list* t = global_typedefs;
+	while(t != NULL)
+	{
+		if(match(t->typedef_name, s)) {
+			return t->identifier;
+		}
+		t = t->next;
+	}
+
+	return NULL;
+}
+
 struct type* lookup_primitive_type(char* s)
 {
+	struct type* t = lookup_typedef(s);
+	if(t != NULL)
+	{
+		return t;
+	}
+
 	return lookup_type(s, prim_types);
 }
 
 struct type* lookup_global_type(char* s)
 {
+	struct type* t = lookup_typedef(s);
+	if(t != NULL)
+	{
+		return t;
+	}
+
 	return lookup_type(s, global_types);
 }
 
@@ -503,41 +532,4 @@ struct type* type_name(void)
 	}
 
 	return ret;
-}
-
-struct type* mirror_type(struct type* source, char* name)
-{
-	struct type* head = lookup_primitive_type(name);
-	struct type* i;
-	if(NULL == head)
-	{
-		head = calloc(1, sizeof(struct type));
-		require(NULL != head, "Exhausted memory while creating a struct\n");
-
-		add_primitive(head);
-
-		i = calloc(1, sizeof(struct type));
-		require(NULL != i, "Exhausted memory while creating a struct indirection\n");
-	}
-	else
-	{
-		i = head->indirect;
-	}
-
-	head->name = name;
-	i->name = name;
-	head->size = source->size;
-	i->size = source->indirect->size;
-	head->offset = source->offset;
-	i->offset = source->indirect->offset;
-	head->is_signed = source->is_signed;
-	i->is_signed = source->indirect->is_signed;
-	head->indirect = i;
-	i->indirect = head;
-	head->members = source->members;
-	i->members =  source->indirect->members;
-	head->type = head;
-	i->type = i;
-
-	return head;
 }
