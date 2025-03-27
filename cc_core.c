@@ -100,7 +100,7 @@ char* register_from_string(int reg)
 		else if(reg == REGISTER_TEMP) return "rdi";
 		else if(reg == REGISTER_BASE) return "rbp";
 		else if(reg == REGISTER_STACK) return "rsp";
-		else if(reg == REGISTER_LOCALS) return "rsi";
+		else if(reg == REGISTER_LOCALS) return "r15";
 		else if(reg == REGISTER_UNUSED1) return "rcx";
 		else if(reg == REGISTER_UNUSED2) return "rdx";
 	}
@@ -1154,7 +1154,6 @@ void function_call(struct token_list* s, int is_function_pointer)
 			require_extra_token();
 		}
 	}
-	emit_move(REGISTER_LOCALS, REGISTER_STACK, "Set locals pointer");
 
 	require_match("ERROR in process_expression_list\nNo ) was found\n", ")");
 
@@ -3396,16 +3395,9 @@ void return_result(void)
 
 	require_match("ERROR in return_result\nMISSING ;\n", ";");
 
-	struct token_list* i;
-	unsigned size_local_var;
-	for(i = function->locals; NULL != i; i = i->next)
+	if(function->locals != NULL)
 	{
-		size_local_var = ceil_div(i->type->size * i->array_modifier, register_size);
-		while(size_local_var != 0)
-		{
-			emit_pop(REGISTER_ONE, "_return_result_locals");
-			size_local_var = size_local_var - 1;
-		}
+		emit_move(REGISTER_STACK, REGISTER_LOCALS, "Undo local variables");
 	}
 
 	if((KNIGHT_POSIX == Architecture) || (KNIGHT_NATIVE == Architecture)) emit_out("RET R15\n");
@@ -3791,6 +3783,10 @@ void declare_function(void)
 		emit_out(":FUNCTION_");
 		emit_out(function->s);
 		emit_out("\n");
+
+		/* Save the current location of the stack pointer. */
+		emit_move(REGISTER_LOCALS, REGISTER_STACK, "Set locals pointer");
+
 		/* If we add any statics we don't want them globally available */
 		function_static_variables_list = NULL;
 		statement();
