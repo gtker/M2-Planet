@@ -1137,6 +1137,8 @@ void function_call(struct token_list* s, int is_function_pointer)
 		emit_push(REGISTER_RETURN, "Protect the old return pointer (link)");
 	}
 	emit_push(REGISTER_BASE, "Protect the old base pointer");
+	emit_push(REGISTER_LOCALS, "Protect the old locals pointer");
+
 	emit_move(REGISTER_TEMP, REGISTER_STACK, "Copy new base pointer");
 
 	int passed = 0;
@@ -1152,6 +1154,7 @@ void function_call(struct token_list* s, int is_function_pointer)
 			require_extra_token();
 		}
 	}
+	emit_move(REGISTER_LOCALS, REGISTER_STACK, "Set locals pointer");
 
 	require_match("ERROR in process_expression_list\nNo ) was found\n", ")");
 
@@ -1241,6 +1244,7 @@ void function_call(struct token_list* s, int is_function_pointer)
 		emit_pop(REGISTER_ONE, "_process_expression_locals");
 	}
 
+	emit_pop(REGISTER_LOCALS, "Restore old locals pointer");
 	emit_pop(REGISTER_BASE, "Restore old base pointer");
 	if((AARCH64 == Architecture) || (RISCV64 == Architecture) || (RISCV32 == Architecture))
 	{
@@ -3427,6 +3431,7 @@ void process_break(void)
 		emit_pop(REGISTER_ONE, "break_cleanup_locals");
 		i = i->next;
 	}
+
 	require_extra_token();
 
 	if((KNIGHT_POSIX == Architecture) || (KNIGHT_NATIVE == Architecture)) emit_out("JUMP @");
