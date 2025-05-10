@@ -3026,12 +3026,12 @@ void collect_local(void)
 
 			require_extra_token();
 			expression();
-
-			load_address_of_variable_into_register(REGISTER_ONE, name);
-			/* Store value of REGISTER_ZERO in REGISTER_ONE deref.
-			 * The result of expression() will be in REGISTER_ZERO. */
-			emit_out(store_value(type_size->size));
 		}
+
+		load_address_of_variable_into_register(REGISTER_ONE, name);
+		/* Store value of REGISTER_ZERO in REGISTER_ONE deref.
+		 * The result of expression() will be in REGISTER_ZERO. */
+		emit_out(store_value(register_size));
 
 		if(global_token->s[0] == ',')
 		{
