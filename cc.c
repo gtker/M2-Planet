@@ -376,13 +376,13 @@ int main(int argc, char** argv)
 	program();
 
 	/* Output the program we have compiled */
-	write_to_out_buffer("\n# Core program\n", destination_file);
+	write_to_out_buffer("\n", destination_file);
 	recursive_output(output_list, destination_file);
 	if(KNIGHT_NATIVE == Architecture) write_to_out_buffer("\n", destination_file);
 	else if(DEBUG) write_to_out_buffer("\n:ELF_data\n", destination_file);
-	write_to_out_buffer("\n# Program global variables\n", destination_file);
+	write_to_out_buffer("\n", destination_file);
 	recursive_output(globals_list, destination_file);
-	write_to_out_buffer("\n# Program strings\n", destination_file);
+	write_to_out_buffer("\n", destination_file);
 	recursive_output(strings_list, destination_file);
 	if(KNIGHT_NATIVE == Architecture) write_to_out_buffer("\n:STACK\n", destination_file);
 	else if(!DEBUG) write_to_out_buffer("\n:ELF_end\n", destination_file);
