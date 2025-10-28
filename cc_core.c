@@ -2814,6 +2814,9 @@ void collect_arguments(void)
 				require_match("Invalid token received in argument array, expected ']'.\n", "]");
 				a->type = a->type->indirect;
 			}
+
+			emit_out(concat_strings4("# ", a->s, ": ", type_size->name));
+			emit_out("\n");
 		}
 
 		/* ignore trailing comma (needed for foo(bar(), 1); expressions*/
@@ -2827,7 +2830,7 @@ void collect_arguments(void)
 	require_extra_token();
 }
 
-void declare_function(void)
+void declare_function(struct type* type_size)
 {
 	current_count = 0;
 	function = sym_declare(global_token->prev->s, NULL, global_function_list, TLO_FUNCTION);
@@ -2846,9 +2849,10 @@ void declare_function(void)
 	if(global_token->s[0] == ';') require_extra_token();
 	else
 	{
-		emit_out("# Defining function ");
-		emit_out(function->s);
-		emit_out("\n");
+		if (!match(type_size->name, "void*"))
+		{
+			emit_out(concat_strings3("# Return value: ", type_size->name, "\n"));
+		}
 		emit_label("FUNCTION_", function->s);
 
 		locals_depth = 0;
@@ -3423,7 +3427,7 @@ new_type:
 	/* Deal with global functions */
 	if(match("(", global_token->s))
 	{
-		declare_function();
+		declare_function(type_size);
 		goto new_type;
 	}
 
