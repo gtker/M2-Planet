@@ -544,8 +544,7 @@ void write_load_immediate(int reg, int value, char* note)
 	}
 	else if(AARCH64 == Architecture)
 	{
-		int has_short_version = (reg == REGISTER_ZERO && value >= -1 && value <= 128) || (reg == REGISTER_EMIT_TEMP &&
-			value <= 128 && value >= 0 && value % 8 == 0);
+		int has_short_version = reg == REGISTER_ZERO  || reg == REGISTER_EMIT_TEMP;
 		if ((value == 0 && reg == 1) || has_short_version)
 		{
 			emit_to_string("mov_");
