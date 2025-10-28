@@ -2835,6 +2835,10 @@ void declare_function(struct type* type_size)
 	current_count = 0;
 	function = sym_declare(global_token->prev->s, NULL, global_function_list, TLO_FUNCTION);
 
+	struct token_list* current = output_list;
+
+	emit_label("FUNCTION_", function->s);
+
 	/* allow previously defined functions to be looked up */
 	global_function_list = function;
 	if((KNIGHT_NATIVE == Architecture) && match("main", function->s))
@@ -2846,14 +2850,17 @@ void declare_function(struct type* type_size)
 
 	require(NULL != global_token, "Function definitions either need to be prototypes or full\n");
 	/* If just a prototype don't waste time */
-	if(global_token->s[0] == ';') require_extra_token();
+	if(global_token->s[0] == ';')
+	{
+		output_list = current;
+		require_extra_token();
+	}
 	else
 	{
 		if (!match(type_size->name, "void*"))
 		{
 			emit_out(concat_strings3("# Return value: ", type_size->name, "\n"));
 		}
-		emit_label("FUNCTION_", function->s);
 
 		locals_depth = 0;
 
@@ -2907,6 +2914,7 @@ void declare_function(struct type* type_size)
 			emit_return();
 		}
 
+		emit_out(concat_strings3("# END_FUNCTION ", function->s, "\n"));
 		emit_out("\n");
 	}
 }
