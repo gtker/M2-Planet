@@ -2861,6 +2861,10 @@ void declare_function(struct type* type_size)
 		{
 			emit_out(concat_strings3("# Return value: ", type_size->name, "\n"));
 		}
+		emit_out("# TODO: Internal\n");
+		if(!match(function->s, "main")) {
+			emit_out("# TODO: Callers\n");
+		}
 
 		locals_depth = 0;
 
